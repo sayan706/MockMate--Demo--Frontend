@@ -6,13 +6,16 @@ import InterviewSession from './components/InterviewSession';
 
 function App() {
   const [selectedInterview, setSelectedInterview] = useState(null);
+  const [cvText, setCvText] = useState(null);
 
-  const handleSelectInterview = (interview) => {
+  const handleSelectInterview = (interview, extractedCvText = null) => {
     setSelectedInterview(interview);
+    setCvText(extractedCvText);
   };
 
   const handleEndInterview = () => {
     setSelectedInterview(null);
+    setCvText(null);
   };
 
   return (
@@ -63,6 +66,7 @@ function App() {
           >
             <InterviewSession 
               interview={selectedInterview} 
+              cvText={cvText}
               onEnd={handleEndInterview} 
             />
           </motion.div>
