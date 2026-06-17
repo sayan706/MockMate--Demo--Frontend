@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { Mic, MicOff, Send, LogOut, CheckCircle2 } from 'lucide-react';
+import { Mic, MicOff, Send, LogOut, CheckCircle2, Camera, Award, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import WebcamFeed from './WebcamFeed';
 import ProctorGuard from './ProctorGuard';
@@ -12,6 +12,8 @@ export default function InterviewSession({ interview, cvText, onEnd }) {
   const [transcript, setTranscript] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(true); // initially true while waiting for first question
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [reportData, setReportData] = useState(null);
   
   const recognitionRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -103,7 +105,7 @@ export default function InterviewSession({ interview, cvText, onEnd }) {
 
       setIsSpeaking(true);
 
-      const response = await fetch('https://mockmate-demo-backend.onrender.com/api/tts', {
+      const response = await fetch('http://localhost:5000/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -166,7 +168,9 @@ export default function InterviewSession({ interview, cvText, onEnd }) {
 
   // Socket Connection
   useEffect(() => {
-    const newSocket = io('https://mockmate-demo-backend.onrender.com', {
+    if (!isCameraReady) return; // Wait for camera permission
+
+    const newSocket = io('http://localhost:5000', {
       transports: ['websocket', 'polling']
     });
 
@@ -189,7 +193,7 @@ export default function InterviewSession({ interview, cvText, onEnd }) {
     newSocket.on('report', (data) => {
       console.log('Received report:', data);
       setIsProcessing(false);
-      setMessages(prev => [...prev, { role: 'ai', text: data.clean_text, type: 'report' }]);
+      setReportData(data);
       speakElevenLabs(data.spoken_remarks || "The interview has concluded. Here is your evaluation report.");
     });
 
@@ -207,7 +211,7 @@ export default function InterviewSession({ interview, cvText, onEnd }) {
       if (recognitionRef.current) recognitionRef.current.stop();
       newSocket.disconnect();
     };
-  }, [interview.id, cvText]);
+  }, [interview.id, cvText, isCameraReady]);
 
   const toggleListen = () => {
     if (isListening) {
@@ -262,12 +266,182 @@ export default function InterviewSession({ interview, cvText, onEnd }) {
       
       <WebcamFeed 
         isActive={true} 
+        onCameraReady={(ready) => setIsCameraReady(ready)}
         onFrameCapture={(frameData) => {
           if (socket && !isProcessing) {
             socket.emit('receive_frame', { frame_data: frameData });
           }
         }} 
       />
+
+      {/* Camera Permission Overlay */}
+      {!isCameraReady && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 500, // WebcamFeed is 1000, so it stays on top
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem'
+          }}
+        >
+          <motion.div 
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            className="glass-panel"
+            style={{
+              padding: '3rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1.5rem',
+              maxWidth: '450px',
+              textAlign: 'center',
+              background: 'rgba(20,20,30,0.8)',
+              border: '1px solid rgba(99,102,241,0.3)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05)',
+              borderRadius: '24px'
+            }}
+          >
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: 'rgba(99,102,241,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid rgba(99,102,241,0.2)',
+              boxShadow: '0 0 30px rgba(99,102,241,0.2)'
+            }}>
+              <Camera size={40} color="#818cf8" />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.8rem', color: '#fff', fontWeight: 600 }}>Camera Access Required</h3>
+              <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '1rem' }}>
+                Your browser is currently waiting for camera permissions. Please allow access to begin your mock interview session.
+              </p>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Final Report Overlay */}
+      {reportData && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2000, // Highest so it's above everything including WebcamFeed
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            overflowY: 'auto'
+          }}
+        >
+          <motion.div 
+            initial={{ scale: 0.9, y: 50, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.2 }}
+            className="glass-panel"
+            style={{
+              width: '100%',
+              maxWidth: '800px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'linear-gradient(145deg, rgba(30,30,40,0.9) 0%, rgba(20,20,30,0.9) 100%)',
+              border: '1px solid rgba(99,102,241,0.4)',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.1), 0 0 40px rgba(99,102,241,0.2)',
+              borderRadius: '24px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '2rem',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              background: 'rgba(99,102,241,0.1)'
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                background: 'rgba(99,102,241,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 20px rgba(99,102,241,0.3)'
+              }}>
+                <Award size={32} color="#818cf8" />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '2rem', margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  Interview Summary <Sparkles size={24} color="#f59e0b" />
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', margin: '0.5rem 0 0 0', fontSize: '1.1rem' }}>
+                  Here is your detailed feedback and evaluation.
+                </p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{
+              padding: '2.5rem',
+              overflowY: 'auto',
+              color: 'var(--text-primary)',
+              fontSize: '1.05rem',
+              lineHeight: 1.8,
+              whiteSpace: 'pre-wrap',
+            }}>
+              {reportData.clean_text}
+            </div>
+
+            {/* Footer Action */}
+            <div style={{
+              padding: '1.5rem 2rem',
+              borderTop: '1px solid rgba(255,255,255,0.05)',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              background: 'rgba(0,0,0,0.2)'
+            }}>
+              <button 
+                onClick={onEnd}
+                className="glass-button"
+                style={{
+                  background: 'var(--accent-primary)',
+                  color: 'white',
+                  padding: '12px 32px',
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)'
+                }}
+              >
+                Return to Dashboard <LogOut size={18} />
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
         

@@ -1,13 +1,41 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Video, VideoOff } from 'lucide-react';
 
-export default function WebcamFeed({ onFrameCapture, isActive }) {
+export default function WebcamFeed({ onFrameCapture, isActive, onCameraReady }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const canvasRef = useRef(null);
   const intervalRef = useRef(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+
+  // Dragging state
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+
+  const handlePointerDown = (e) => {
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging) return;
+    
+    setPosition({ 
+      x: e.clientX - dragStartRef.current.x, 
+      y: e.clientY - dragStartRef.current.y 
+    });
+  };
+
+  const handlePointerUp = (e) => {
+    setIsDragging(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
 
   // Start webcam
   useEffect(() => {
@@ -24,11 +52,13 @@ export default function WebcamFeed({ onFrameCapture, isActive }) {
           videoRef.current.srcObject = stream;
         }
         setCameraReady(true);
+        if (onCameraReady) onCameraReady(true);
         setCameraError(null);
       } catch (err) {
         console.error('Camera access denied:', err);
         setCameraError('Camera access denied. Please allow camera to proceed.');
         setCameraReady(false);
+        if (onCameraReady) onCameraReady(false);
       }
     };
 
@@ -80,6 +110,7 @@ export default function WebcamFeed({ onFrameCapture, isActive }) {
 
     const handleTrackEnded = () => {
       setCameraReady(false);
+      if (onCameraReady) onCameraReady(false);
       setCameraError('Camera was disconnected. Please reconnect your camera.');
     };
 
@@ -92,18 +123,28 @@ export default function WebcamFeed({ onFrameCapture, isActive }) {
   return (
     <>
       <canvas ref={canvasRef} style={{ display: 'none' }} />
-      <div style={{
+      <div 
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{
         position: 'fixed',
         bottom: '24px',
         right: '24px',
         zIndex: 1000,
         borderRadius: '16px',
         overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 2px rgba(99,102,241,0.3)',
+        boxShadow: isDragging 
+          ? '0 16px 40px rgba(0,0,0,0.6), 0 0 0 2px rgba(99,102,241,0.5)' 
+          : '0 8px 32px rgba(0,0,0,0.5), 0 0 0 2px rgba(99,102,241,0.3)',
         background: '#000',
         width: '200px',
         height: '150px',
-        transition: 'all 0.3s ease',
+        transition: isDragging ? 'none' : 'box-shadow 0.3s ease',
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        touchAction: 'none',
       }}>
         {/* Live indicator */}
         <div style={{
