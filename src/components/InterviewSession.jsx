@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { Mic, MicOff, Send, LogOut, CheckCircle2, Camera, Award, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import WebcamFeed from './WebcamFeed';
 import ProctorGuard from './ProctorGuard';
 import { API_BASE_URL } from '../config';
@@ -409,9 +410,20 @@ export default function InterviewSession({ interview, cvText, onEnd }) {
               color: 'var(--text-primary)',
               fontSize: '1.05rem',
               lineHeight: 1.8,
-              whiteSpace: 'pre-wrap',
             }}>
-              {reportData.clean_text}
+              <ReactMarkdown 
+                components={{
+                  h1: ({node, ...props}) => <h1 style={{ color: '#818cf8', marginTop: '1.5em', marginBottom: '0.5em', fontSize: '1.8rem' }} {...props} />,
+                  h2: ({node, ...props}) => <h2 style={{ color: '#818cf8', marginTop: '1.5em', marginBottom: '0.5em', fontSize: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.3em' }} {...props} />,
+                  h3: ({node, ...props}) => <h3 style={{ color: '#c7d2fe', marginTop: '1.2em', marginBottom: '0.5em', fontSize: '1.3rem' }} {...props} />,
+                  p: ({node, ...props}) => <p style={{ marginBottom: '1em' }} {...props} />,
+                  ul: ({node, ...props}) => <ul style={{ marginBottom: '1em', paddingLeft: '1.5em' }} {...props} />,
+                  li: ({node, ...props}) => <li style={{ marginBottom: '0.5em' }} {...props} />,
+                  strong: ({node, ...props}) => <strong style={{ color: '#fff', fontWeight: 600 }} {...props} />
+                }}
+              >
+                {reportData.text}
+              </ReactMarkdown>
             </div>
 
             {/* Footer Action */}
