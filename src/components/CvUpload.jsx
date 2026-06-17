@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 import { Upload, File, FileText, CheckCircle2, AlertCircle, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -78,7 +79,7 @@ export default function CvUpload({ onUploadSuccess, onSkip, canSkip = false }) {
         });
       }, 300);
 
-      const response = await axios.post('https://mockmate-demo-backend.onrender.com/api/upload-cv', formData, {
+      const response = await axios.post(`${API_BASE_URL}/api/upload-cv`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

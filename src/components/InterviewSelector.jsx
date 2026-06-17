@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../config";
 import { Play, ChevronDown, Loader2, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CvUpload from "./CvUpload";
@@ -14,7 +15,7 @@ export default function InterviewSelector({ onSelect }) {
   useEffect(() => {
     // Fetch interviews from backend
     axios
-      .get("https://mockmate-demo-backend.onrender.com/api/interviews")
+      .get(`${API_BASE_URL}/api/interviews`)
       .then((res) => {
         setInterviews(res.data);
         if (res.data.length > 0) {

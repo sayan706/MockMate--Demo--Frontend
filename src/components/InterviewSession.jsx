@@ -4,6 +4,7 @@ import { Mic, MicOff, Send, LogOut, CheckCircle2, Camera, Award, Sparkles } from
 import { motion } from 'framer-motion';
 import WebcamFeed from './WebcamFeed';
 import ProctorGuard from './ProctorGuard';
+import { API_BASE_URL } from '../config';
 
 export default function InterviewSession({ interview, cvText, onEnd }) {
   const [socket, setSocket] = useState(null);
@@ -105,7 +106,7 @@ export default function InterviewSession({ interview, cvText, onEnd }) {
 
       setIsSpeaking(true);
 
-      const response = await fetch('http://localhost:5000/api/tts', {
+      const response = await fetch(`${API_BASE_URL}/api/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -170,7 +171,7 @@ export default function InterviewSession({ interview, cvText, onEnd }) {
   useEffect(() => {
     if (!isCameraReady) return; // Wait for camera permission
 
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io(API_BASE_URL, {
       transports: ['websocket', 'polling']
     });
 
